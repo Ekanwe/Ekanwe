@@ -39,10 +39,53 @@ import SaveDealsPageInfluenceur from './pages/InfluenceurPages/SaveDealsPage';
 import SuivisDealsPageInfluenceur from './pages/InfluenceurPages/SuivisDeals';
 import ReviewPageCommercant from './pages/CommercantPages/Review';
 import ForgotPassword from './pages/LoginPages/ForgotPassword';
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "./firebase/firebase";
+import { doc, getDoc } from "firebase/firestore";
+
+function AppInitializer() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const role = userSnap.data().role;
+          const inscription = userSnap.data().inscription;
+
+          if (inscription === "1") navigate("/registrationstepone");
+          else if (inscription === "2") navigate("/intereststep");
+          else if (inscription === "3") navigate("/socialconnect");
+          else if (inscription === "4") navigate("/portfolio");
+          else if (inscription === "terminé") {
+            if (role === "commerçant") navigate("/dealscommercant");
+            else if (role === "influenceur") navigate("/dealsinfluenceur");
+          } else {
+            navigate("/register");
+          }
+        } else {
+          navigate("/connection");
+        }
+      } else {
+        navigate("/connection");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
+
+  return null;
+}
 
 function App() {
   return (
     <Router>
+      <AppInitializer />
       <Routes>
         <Route path="/" element={<Splash />} />
         <Route path="/connection" element={<Connection />} />
