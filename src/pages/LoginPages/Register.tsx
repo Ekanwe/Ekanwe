@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/ekanwe-logo.png";
 import { Mail } from "lucide-react";
-import { createUserWithEmailAndPassword, sendEmailVerification, signInWithRedirect } from "firebase/auth";
+import { createUserWithEmailAndPassword, getRedirectResult, sendEmailVerification, signInWithRedirect } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import { useUserData } from "../../context/UserContext";
@@ -20,6 +20,41 @@ export default function Register() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          const user = result.user;
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+
+          if (!userSnap.exists()) {
+            const fullName = user.displayName || "";
+            const [firstName, ...rest] = fullName.split(" ");
+            const lastName = rest.join(" ");
+
+            await setDoc(userRef, {
+              email: user.email,
+              nom: lastName || null,
+              prenoms: firstName || null,
+              photoURL: user.photoURL || null,
+              role: userData?.role || null,
+              dateCreation: new Date(),
+              inscription: "1",
+            });
+          }
+
+          navigate("/registrationstepone");
+        }
+      } catch (err) {
+        console.error("Erreur de redirection Google:", err);
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

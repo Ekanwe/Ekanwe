@@ -43,47 +43,13 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { getRedirectResult } from "firebase/auth";
-import { useUserData } from "./context/UserContext";
+import { doc, getDoc } from "firebase/firestore";
 
 function AppInitializer() {
 
-  const { userData } = useUserData();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result && result.user) {
-          const user = result.user;
-          const userRef = doc(db, "users", user.uid);
-          const userSnap = await getDoc(userRef);
-
-          if (!userSnap.exists()) {
-            const fullName = user.displayName || "";
-            const [firstName, ...rest] = fullName.split(" ");
-            const lastName = rest.join(" ");
-
-            await setDoc(userRef, {
-              email: user.email,
-              nom: lastName || null,
-              prenoms: firstName || null,
-              photoURL: user.photoURL || null,
-              role: userData?.role || null,
-              dateCreation: new Date(),
-              inscription: "1",
-            });
-          }
-
-          navigate("/registrationstepone");
-        }
-      } catch (err) {
-        console.error("Erreur de redirection Google:", err);
-      }
-    };
-
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
@@ -106,8 +72,6 @@ function AppInitializer() {
         } else {
           navigate("/connection");
         }
-      } else {
-        await handleRedirectResult();
       }
     });
 

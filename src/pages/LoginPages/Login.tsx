@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/ekanwe-logo.png";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { getRedirectResult, signInWithEmailAndPassword, signInWithRedirect } from "firebase/auth";
 import { auth, db } from "../../firebase/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useUserData } from "../../context/UserContext";
@@ -18,11 +18,62 @@ export default function LoginPage() {
   const { userData } = useUserData();
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const checkGoogleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (!result) return;
+
+        const user = result.user;
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const { role, inscription } = userSnap.data();
+
+          if (inscription === "Non Terminé" || inscription === "1") {
+            navigate("/registrationstepone");
+          } else if (inscription === "2") {
+            navigate("/intereststep");
+          } else if (inscription === "3") {
+            navigate("/socialconnectstep");
+          } else if (inscription === "4") {
+            navigate("/portfoliostep");
+          } else if (inscription === "Terminé") {
+            if (role === "commerçant") navigate("/dealscommercant");
+            else if (role === "influenceur") navigate("/dealsinfluenceur");
+          } else {
+            navigate("/register");
+          }
+        } else {
+          setError("Compte inexistant. Veuillez vous inscrire.");
+        }
+      } catch (err) {
+        console.error("Erreur redirection Google :", err);
+        setError("Erreur lors du retour depuis Google.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkGoogleRedirect();
+  }, []);
+
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLoginData({ ...loginData, [e.target.name]: e.target.value });
   };
 
   const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (error) {
+      console.error("Erreur Google Sign In :", error);
+      alert(`Erreur Google Sign In : ${error}`);
+      setError("Erreur lors de la connexion avec Google.");
+    }
     try {
       setLoading(true);
       const provider = new GoogleAuthProvider();
