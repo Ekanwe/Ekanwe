@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/ekanwe-logo.png";
 import { Mail } from "lucide-react";
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, signInWithRedirect } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import { useUserData } from "../../context/UserContext";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { GoogleAuthProvider } from "firebase/auth";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -27,41 +27,15 @@ export default function Register() {
 
   const handleGoogleSignUp = async () => {
     const provider = new GoogleAuthProvider();
-  
+
     try {
-      setLoading(true);
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-  
-      const fullName = user.displayName || "";
-      const [firstName, ...rest] = fullName.split(" ");
-      const lastName = rest.join(" ");
-  
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-  
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          email: user.email,
-          nom: lastName || null,
-          prenoms: firstName || null,
-          photoURL: user.photoURL || null,
-          role: userData?.role || null,
-          dateCreation: new Date(),
-          inscription: "1",
-        });
-      }
-  
-      navigate("/registrationstepone");
+      await signInWithRedirect(auth, provider);
     } catch (error) {
       console.error("Erreur Google Sign In :", error);
       alert(`Erreur Google Sign In : ${error}`);
       setError("Erreur lors de la connexion avec Google.");
-    } finally {
-      setLoading(false);
     }
   };
-  
 
   const handleSubmit = async () => {
     const { email, password, confirmation } = formData;
@@ -169,8 +143,8 @@ export default function Register() {
           </button>
           <button
             className={`px-6 py-2 rounded-lg text-sm font-semibold ${loading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-[#FF6B2E] text-white"
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-[#FF6B2E] text-white"
               }`}
             onClick={handleSubmit}
             disabled={loading}
